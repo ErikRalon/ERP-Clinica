@@ -1,16 +1,16 @@
-import express, { Application, Request, Response } from "express";
-import cors from "cors";
+import express from 'express';
+import cors from 'cors';
+import pacienteRutas from './rutas/pacienteRutas';
 
-const aplicacion: Application = express();
+const app = express();
 
-aplicacion.use(cors());
-aplicacion.use(express.json());
+app.use(cors());
+app.use(express.json());
 
-aplicacion.get("/salud", (solicitud: Request, respuesta: Response) => {
-  respuesta.status(200).json({
-    exito: true,
-    mensaje: "Backend ERP clínico funcionando correctamente"
-  });
+app.use('/api/pacientes', pacienteRutas);
+
+app.get('/', (req, res) => {
+  res.json({ mensaje: 'API ERP Clínica funcionando' });
 });
 
-export default aplicacion;
+export default app;
