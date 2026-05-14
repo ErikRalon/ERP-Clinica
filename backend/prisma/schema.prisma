@@ -1,0 +1,300 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Pacientes
+model Paciente {
+  id                  Int       @id @default(autoincrement())
+  nombres             String
+  apellidos           String
+  dpi                 String    @unique
+  fechaNacimiento     DateTime
+  genero              Genero
+  telefono            String?
+  email               String?
+  direccion           String?
+  contactoEmergencia  String?
+  telefonoEmergencia  String?
+  tipoSangre          String?
+  alergias            String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  citas               Cita[]
+  historiasClinicas   HistoriaClinica[]
+  facturas            Factura[]
+  hospitalizaciones   Hospitalizacion[]
+}
+
+enum Genero {
+  MASCULINO
+  FEMENINO
+  OTRO
+}
+
+// Usuarios y seguridad
+model Usuario {
+  id              Int       @id @default(autoincrement())
+  email           String    @unique
+  password        String
+  nombres         String
+  apellidos       String
+  telefono        String?
+  rol             Rol       @default(RECEPCIONISTA)
+  activo          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  medico          Medico?
+  citas           Cita[]
+  facturas        Factura[]
+}
+
+enum Rol {
+  ADMIN
+  MEDICO
+  ENFERMERO
+  RECEPCIONISTA
+  FARMACEUTICO
+  LABORATORISTA
+}
+
+// Médicos
+model Medico {
+  id                Int       @id @default(autoincrement())
+  usuarioId         Int       @unique
+  especialidad      String
+  colegiado         String    @unique
+  horarioInicio     String?
+  horarioFin        String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  usuario           Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  citas             Cita[]
+  historiasClinicas HistoriaClinica[]
+  recetas           Receta[]
+  ordenesLab        OrdenLaboratorio[]
+}
+
+// Citas
+model Cita {
+  id              Int       @id @default(autoincrement())
+  pacienteId      Int
+  medicoId        Int
+  fecha           DateTime
+  horaInicio      String
+  horaFin         String
+  motivo          String
+  estado          EstadoCita @default(PENDIENTE)
+  observaciones   String?
+  creadaPorId     Int
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  paciente        Paciente  @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  medico          Medico    @relation(fields: [medicoId], references: [id])
+  creadaPor       Usuario   @relation(fields: [creadaPorId], references: [id])
+}
+
+enum EstadoCita {
+  PENDIENTE
+  CONFIRMADA
+  EN_CURSO
+  COMPLETADA
+  CANCELADA
+  NO_ASISTIO
+}
+
+// Historias clínicas
+model HistoriaClinica {
+  id                Int       @id @default(autoincrement())
+  pacienteId        Int
+  medicoId          Int
+  fecha             DateTime  @default(now())
+  motivoConsulta    String
+  sintomasPrincipales String
+  diagnostico       String
+  tratamiento       String?
+  observaciones     String?
+  presionArterial   String?
+  temperatura       String?
+  peso              Float?
+  altura            Float?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  paciente          Paciente  @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  medico            Medico    @relation(fields: [medicoId], references: [id])
+  recetas           Receta[]
+  ordenesLab        OrdenLaboratorio[]
+}
+
+// Recetas médicas
+model Receta {
+  id                  Int       @id @default(autoincrement())
+  historiaClinicaId   Int
+  medicoId            Int
+  fecha               DateTime  @default(now())
+  indicaciones        String
+  vigencia            DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  historiaClinica     HistoriaClinica @relation(fields: [historiaClinicaId], references: [id], onDelete: Cascade)
+  medico              Medico    @relation(fields: [medicoId], references: [id])
+  detalles            DetalleReceta[]
+}
+
+model DetalleReceta {
+  id              Int       @id @default(autoincrement())
+  recetaId        Int
+  medicamentoId   Int
+  dosis           String
+  frecuencia      String
+  duracion        String
+  
+  receta          Receta    @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+  medicamento     Medicamento @relation(fields: [medicamentoId], references: [id])
+}
+
+// Laboratorio
+model OrdenLaboratorio {
+  id                  Int       @id @default(autoincrement())
+  historiaClinicaId   Int
+  medicoId            Int
+  fecha               DateTime  @default(now())
+  tipoExamen          String
+  indicaciones        String?
+  estado              EstadoOrden @default(PENDIENTE)
+  resultados          String?
+  fechaResultado      DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  historiaClinica     HistoriaClinica @relation(fields: [historiaClinicaId], references: [id], onDelete: Cascade)
+  medico              Medico    @relation(fields: [medicoId], references: [id])
+}
+
+enum EstadoOrden {
+  PENDIENTE
+  EN_PROCESO
+  COMPLETADA
+  CANCELADA
+}
+
+// Inventario
+model Medicamento {
+  id                Int       @id @default(autoincrement())
+  nombre            String
+  descripcion       String?
+  principioActivo   String?
+  presentacion      String?
+  stock             Int       @default(0)
+  stockMinimo       Int       @default(10)
+  precioCompra      Float
+  precioVenta       Float
+  lote              String?
+  fechaVencimiento  DateTime?
+  activo            Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  detallesReceta    DetalleReceta[]
+  detallesFactura   DetalleFactura[]
+  movimientos       MovimientoInventario[]
+}
+
+model MovimientoInventario {
+  id              Int       @id @default(autoincrement())
+  medicamentoId   Int
+  tipo            TipoMovimiento
+  cantidad        Int
+  motivo          String?
+  fecha           DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  
+  medicamento     Medicamento @relation(fields: [medicamentoId], references: [id])
+}
+
+enum TipoMovimiento {
+  ENTRADA
+  SALIDA
+  AJUSTE
+  VENCIMIENTO
+}
+
+// Facturación
+model Factura {
+  id              Int       @id @default(autoincrement())
+  pacienteId      Int
+  creadaPorId     Int
+  fecha           DateTime  @default(now())
+  subtotal        Float
+  descuento       Float     @default(0)
+  total           Float
+  estado          EstadoFactura @default(PENDIENTE)
+  metodoPago      MetodoPago?
+  observaciones   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  paciente        Paciente  @relation(fields: [pacienteId], references: [id])
+  creadaPor       Usuario   @relation(fields: [creadaPorId], references: [id])
+  detalles        DetalleFactura[]
+}
+
+model DetalleFactura {
+  id              Int       @id @default(autoincrement())
+  facturaId       Int
+  concepto        String
+  cantidad        Int
+  precioUnitario  Float
+  subtotal        Float
+  medicamentoId   Int?
+  
+  factura         Factura   @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  medicamento     Medicamento? @relation(fields: [medicamentoId], references: [id])
+}
+
+enum EstadoFactura {
+  PENDIENTE
+  PAGADA
+  CANCELADA
+  ANULADA
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+  SEGURO
+}
+
+// Hospitalización
+model Hospitalizacion {
+  id              Int       @id @default(autoincrement())
+  pacienteId      Int
+  numeroHabitacion String
+  motivoIngreso   String
+  fechaIngreso    DateTime  @default(now())
+  fechaAlta       DateTime?
+  estado          EstadoHospitalizacion @default(ACTIVA)
+  diagnostico     String?
+  observaciones   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  paciente        Paciente  @relation(fields: [pacienteId], references: [id])
+}
+
+enum EstadoHospitalizacion {
+  ACTIVA
+  ALTA
+  TRANSFERIDO
+}
