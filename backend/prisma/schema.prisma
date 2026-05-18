@@ -22,13 +22,12 @@ model Paciente {
   telefonoEmergencia  String?
   tipoSangre          String?
   alergias            String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
   
   citas               Cita[]
   historiasClinicas   HistoriaClinica[]
   facturas            Factura[]
-  hospitalizaciones   Hospitalizacion[]
+  consumosInsumo      ConsumoInsumo[]
+
 }
 
 enum Genero {
@@ -53,15 +52,14 @@ model Usuario {
   medico          Medico?
   citas           Cita[]
   facturas        Factura[]
+   consumosInsumo      ConsumoInsumo[]
 }
 
 enum Rol {
+  SUPERADMIN
   ADMIN
   MEDICO
-  ENFERMERO
   RECEPCIONISTA
-  FARMACEUTICO
-  LABORATORISTA
 }
 
 // Médicos
@@ -222,6 +220,31 @@ model MovimientoInventario {
   medicamento     Medicamento @relation(fields: [medicamentoId], references: [id])
 }
 
+model Insumo {
+  id           Int      @id @default(autoincrement())
+  nombre       String
+  descripcion  String?
+  farmaceutica String?
+  costoVenta   Float
+  stockActual  Int      @default(0)
+  unidad       String
+  activo       Boolean  @default(true)
+
+  consumos     ConsumoInsumo[]
+}
+
+model ConsumoInsumo {
+  id          Int      @id @default(autoincrement())
+  insumo      Insumo   @relation(fields: [insumoId], references: [id])
+  insumoId    Int
+  paciente    Paciente @relation(fields: [pacienteId], references: [id])
+  pacienteId  Int
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id]) // médico
+  usuarioId   Int
+  cantidad    Int
+  fecha       DateTime @default(now())
+}
+
 enum TipoMovimiento {
   ENTRADA
   SALIDA
@@ -274,27 +297,4 @@ enum MetodoPago {
   TARJETA
   TRANSFERENCIA
   SEGURO
-}
-
-// Hospitalización
-model Hospitalizacion {
-  id              Int       @id @default(autoincrement())
-  pacienteId      Int
-  numeroHabitacion String
-  motivoIngreso   String
-  fechaIngreso    DateTime  @default(now())
-  fechaAlta       DateTime?
-  estado          EstadoHospitalizacion @default(ACTIVA)
-  diagnostico     String?
-  observaciones   String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  paciente        Paciente  @relation(fields: [pacienteId], references: [id])
-}
-
-enum EstadoHospitalizacion {
-  ACTIVA
-  ALTA
-  TRANSFERIDO
 }
